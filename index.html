@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <!-- 6e83a3ddefec727d55659984181ac6ac -->
+    <label for="">Search by City Name</label>
+    <input type="text" id="city_name">
+    <button onclick="get_city_id()">Search</button> <hr>
+
+    <label for="">Search by Coordinates</label> <br>
+    <label for="">Latitude</label>
+    <input type="text" id="lat">
+    <label for="">Longitude</label>
+    <input type="text" id="long">
+    <button onclick="get_city_id_by_coords()">Search</button> <hr>
+
+    <div id="results"></div>
+
+   <div id="editor"></div>
+   <button id="cmd">generate PDF</button>
+</body>
+</html>
+
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/1.5.3/jspdf.min.js"></script>
+<script type="text/javascript" src="https://html2canvas.hertzen.com/dist/html2canvas.js"></script>
+<script src="https://code.jquery.com/jquery-3.5.1.js" integrity="sha256-QWo7LDvxbWT2tbbQ97B53yJnYU3WhH/C8ycbRAkjPDc=" crossorigin="anonymous"></script>
+<script>
+
+    const city_name = document.querySelector('#city_name')
+    const results = document.querySelector('#results')
+    const lat = document.querySelector('#lat')
+    const long = document.querySelector('#long')
+
+    let city_id
+    let restaraunts
+    let html
+
+    function get_city_id(){
+        axios({
+            method: 'get',
+            url: `https://developers.zomato.com/api/v2.1/cities?q=${city_name.value}`,
+            headers: {
+                "Content-Type": "application/json",
+                "user-key": "6e83a3ddefec727d55659984181ac6ac"
+            }
+        })
+        .then(response => {
+            console.log(response.data.location_suggestions[0].id)
+            city_id = response.data.location_suggestions[0].id
+            return get_restaraunts(city_id)
+        })
+    }
+
+    function get_city_id_by_coords(){
+        axios({
+            method: 'get',
+            url: `https://developers.zomato.com/api/v2.1/cities?lat=${lat.value}&lon=${long.value}`,
+            headers: {
+                "Content-Type": "application/json",
+                "user-key": "6e83a3ddefec727d55659984181ac6ac"
+            }
+        })
+        .then(response => {
+            console.log(response.data.location_suggestions[0].id)
+            city_id = response.data.location_suggestions[0].id
+            return get_restaraunts(city_id)
+        })
+    }
+
+    function get_restaraunts(city_id){
+        axios({
+            method: 'get',
+            url: `https://developers.zomato.com/api/v2.1/collections?city_id=${city_id}`,
+            headers: {
+                "Content-Type": "application/json",
+                "user-key": "6e83a3ddefec727d55659984181ac6ac"
+            }
+        })
+        .then(response => {
+            //console.log(response.data.collections)
+            restaraunts = response.data.collections
+            restaraunts = restaraunts.slice(1, 11)
+
+            results.innerHTML = ``
+            restaraunts.forEach(res => {
+                //console.log(res.collection.title)
+                html = res.collection.title
+                results.innerHTML += `${html}  <br>`
+            })
+            
+        })
+    }
+
+    var doc = new jsPDF();
+var specialElementHandlers = {
+    '#editor': function (element, renderer) {
+        return true;
+    }
+};
+
+$('#cmd').click(function () {
+    doc.fromHTML($('#results').html(), 15, 15, {
+        'width': 170,
+            'elementHandlers': specialElementHandlers
+    });
+    doc.save('results.pdf');
+})
+</script>
